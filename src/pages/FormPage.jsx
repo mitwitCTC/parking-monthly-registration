@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useNavigate, useParams, Navigate } from "react-router-dom";
+import { useNavigate, useParams, useLocation, Navigate } from "react-router-dom";
 import AppBar from "../components/AppBar.jsx";
 import BottomButton from "../components/BottomButton.jsx";
 import DatePicker from "../components/DatePicker.jsx";
@@ -75,8 +75,27 @@ function validate(form) {
 
 export default function FormPage() {
   const { siteCode } = useParams();
-  const { data: siteData, loading: siteLoading, error: siteError } = useSiteInfo(siteCode);
+  const location = useLocation();
+  const { data: siteData, loading: siteLoading, error: siteError } = useSiteInfo(
+    siteCode,
+    { initialData: location.state?.siteInfo ?? null },
+  );
   const navigate = useNavigate();
+
+  // 帶著原本 query string（bQz0fX8f）導航
+  const goWithSearch = (pathname, options) =>
+    navigate({ pathname, search: location.search }, options);
+
+  // 上一頁：使用 history back，保留之前連同 state 的 entry
+  // 避免 push 新 entry 導致重打 API（靈深連條下沒有 state）
+  const handleBack = () => {
+    // 初始進入點（沒有 history）→ fallback 到首頁
+    if (location.key === "default") {
+      goWithSearch("/");
+    } else {
+      navigate(-1);
+    }
+  };
 
   const [form, setForm] = useState({
     vehicleType: "",
@@ -151,12 +170,13 @@ export default function FormPage() {
   if (siteLoading) {
     return (
       <div className="form-page">
-        <AppBar title="載入中..." onBack={() => navigate("/")} />
+        <AppBar title="載入中..." onBack={handleBack} />
         <p style={{ textAlign: "center", marginTop: 120 }}>載入中...</p>
       </div>
     );
   }
-  if (siteError || !siteData) return <Navigate to="/" replace />;
+  if (siteError || !siteData)
+    return <Navigate to={{ pathname: "/", search: location.search }} replace />;
 
   const { site, vehicleTypes } = siteData;
   const vehicleOptions = vehicleTypes.map((v) => ({
@@ -191,7 +211,7 @@ export default function FormPage() {
       if (result.hasBill && result.billId) {
         window.location.href = `https://rental.mitwit-cre.com.tw/?mid=${result.billId}`;
       } else {
-        navigate(`/success/${siteCode}`, {
+        goWithSearch(`/success/${siteCode}`, {
           state: { form, rental },
         });
       }
@@ -209,8 +229,8 @@ export default function FormPage() {
   return (
     <div className="form-page">
       <AppBar
-        title={site.siteName}
-        onBack={() => navigate(`/terms/${siteCode}`)}
+        title={site.parkName || site.siteName}
+        onBack={handleBack}
       />
 
       <main className="form-page__body">

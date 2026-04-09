@@ -1,27 +1,48 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import AppBar from "../components/AppBar.jsx";
-import { fetchSiteInfo } from "../api/monthlyRental.js";
+import { fetchSiteInfo, ApiError } from "../api/monthlyRental.js";
+import { getCompanyToken } from "../utils/urlParams.js";
+import { alertError, alertWarning } from "../utils/alert.js";
 import "./SearchPage.css";
 
 export default function SearchPage() {
   const [code, setCode] = useState("");
-  const [error, setError] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // 一進站檢查網址有沒有 bQz0fX8f
+  useEffect(() => {
+    if (!getCompanyToken()) {
+      alertWarning(
+        "請從正確連結進入此頁面。",
+        "缺少網址參數",
+      );
+    }
+  }, []);
 
   async function handleSearch() {
-    const trimmed = code.trim().toUpperCase();
+    const trimmed = code.trim();
     if (!trimmed) return;
 
     setLoading(true);
-    setError(false);
     try {
       const result = await fetchSiteInfo(trimmed);
-      if (result) {
-        navigate(`/terms/${result.site.siteCode}`);
+      // 帶上原本的 query string（保留 bQz0fX8f），讓後續頁面 refresh 也能用
+      const target = result.termContent
+        ? `/terms/${result.site.siteCode}`
+        : `/form/${result.site.siteCode}`;
+
+      navigate(
+        { pathname: target, search: location.search },
+        { state: { siteInfo: result } },
+      );
+    } catch (err) {
+      if (err instanceof ApiError) {
+        alertError(err.message);
       } else {
-        setError(true);
+        alertError("發生未預期錯誤，請稍後再試。");
       }
     } finally {
       setLoading(false);
@@ -44,10 +65,7 @@ export default function SearchPage() {
               className="search-page__input"
               placeholder="場站代碼"
               value={code}
-              onChange={(e) => {
-                setCode(e.target.value);
-                setError(false);
-              }}
+              onChange={(e) => setCode(e.target.value)}
               onKeyDown={handleKeyDown}
               disabled={loading}
             />
@@ -62,12 +80,6 @@ export default function SearchPage() {
             <span className="search-page__spinner" />
           </button>
         </div>
-
-        {error && (
-          <div className="search-page__alert">
-            ⚠ 查<strong>無此場站代碼</strong>
-          </div>
-        )}
       </main>
     </div>
   );
