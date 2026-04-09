@@ -1,9 +1,11 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
+import SearchPage from "./pages/SearchPage.jsx";
 
 export default function App() {
   return (
     <Routes>
-      <Route path="*" element={<div />} />
+      <Route path="/" element={<SearchPage />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }

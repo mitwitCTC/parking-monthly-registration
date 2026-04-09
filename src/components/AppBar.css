@@ -1,0 +1,39 @@
+.app-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 56px;
+  padding: 0 16px;
+  background: var(--color-main);
+  color: var(--color-white);
+}
+
+.app-bar__back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-white);
+  font-size: 1.25rem;
+  transition: background 0.2s;
+}
+
+.app-bar__back:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.app-bar__title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

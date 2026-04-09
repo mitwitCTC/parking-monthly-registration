@@ -1,0 +1,110 @@
+.search-page {
+  min-height: 100dvh;
+}
+
+.search-page__body {
+  padding: 80px 20px 20px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.search-page__row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.search-page__input-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 10px 16px;
+  background: var(--color-white);
+  transition: border-color 0.2s;
+}
+
+.search-page__input-wrap:focus-within {
+  border-color: var(--color-main);
+}
+
+.search-page__search-icon {
+  font-size: 1.4rem;
+  color: var(--color-text-light);
+  flex-shrink: 0;
+}
+
+.search-page__input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 1rem;
+}
+
+/* ── 搜尋按鈕 ── */
+.search-page__btn {
+  position: relative;
+  flex-shrink: 0;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--color-main);
+  color: var(--color-white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+  overflow: hidden;
+}
+
+.search-page__btn:hover:not(:disabled) {
+  background: var(--color-main-light);
+}
+
+.search-page__btn:disabled {
+  cursor: default;
+}
+
+.search-page__btn-icon {
+  font-size: 1.5rem;
+  transition: opacity 0.2s;
+}
+
+/* loading 時隱藏 icon、顯示 spinner */
+.search-page__btn--loading .search-page__btn-icon {
+  opacity: 0;
+}
+
+.search-page__spinner {
+  display: none;
+}
+
+.search-page__btn--loading .search-page__spinner {
+  display: block;
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-top-color: var(--color-white);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── 錯誤提示 ── */
+.search-page__alert {
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: var(--color-error-bg);
+  color: var(--color-error);
+  border-radius: var(--radius);
+  font-size: 0.95rem;
+}
