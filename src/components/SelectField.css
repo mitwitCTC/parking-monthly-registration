@@ -1,0 +1,110 @@
+.select-field {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.select-field__icon {
+  flex-shrink: 0;
+  width: 28px;
+  font-size: 1.25rem;
+  line-height: 48px;
+  text-align: center;
+  color: var(--color-text-light);
+  transition: color 0.2s;
+}
+
+.select-field--active .select-field__icon {
+  color: var(--color-main);
+}
+
+.select-field__body {
+  flex: 1;
+  position: relative;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 14px 36px 14px 14px;
+  cursor: pointer;
+  background: var(--color-white);
+  min-height: 48px;
+}
+
+.select-field--error .select-field__body {
+  border-color: var(--color-error);
+}
+
+.select-field__label {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  font-size: 1rem;
+  color: var(--color-text-light);
+  pointer-events: none;
+  transition: all 0.2s;
+  background: var(--color-white);
+  padding: 0 4px;
+}
+
+.select-field__label--float {
+  top: -8px;
+  font-size: 0.75rem;
+  color: var(--color-main);
+}
+
+.select-field__value {
+  font-size: 1rem;
+  min-height: 1.2em;
+}
+
+.select-field__arrow {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  font-size: 0.85rem;
+  color: var(--color-text-light);
+  transition: transform 0.2s;
+}
+
+.select-field__arrow--open {
+  transform: translateY(-50%) rotate(180deg);
+}
+
+.select-field__dropdown {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: -1px;
+  right: -1px;
+  z-index: 50;
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  list-style: none;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.select-field__option {
+  padding: 12px 14px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.select-field__option:hover {
+  background: #e8f5f5;
+}
+
+.select-field__option--active {
+  background: #d0eded;
+  font-weight: 600;
+}
+
+.select-field__error {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.75rem;
+  color: var(--color-error);
+}
