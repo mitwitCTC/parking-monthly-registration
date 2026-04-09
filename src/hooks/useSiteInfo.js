@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { fetchSiteInfo } from "../api/monthlyRental.js";
 
 /**
- * 依 siteCode 載入場站資訊（site, termContent, terms, vehicleTypes）
+ * 依 siteCode 載入場站資訊（site, termContent, terms）
  *
  * @param {string | undefined} siteCode
  * @param {{ initialData?: object | null }} [options]

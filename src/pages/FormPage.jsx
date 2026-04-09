@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams, useLocation, Navigate } from "react-router-dom";
 import AppBar from "../components/AppBar.jsx";
 import BottomButton from "../components/BottomButton.jsx";
@@ -6,11 +6,14 @@ import DatePicker from "../components/DatePicker.jsx";
 import SelectField from "../components/SelectField.jsx";
 import TextField from "../components/TextField.jsx";
 import {
-  fetchPaymentPlans,
-  calculateRental,
+  fetchRates,
+  getAvailablePeriods,
   submitRegistration,
+  CAR_TYPE_LABELS,
+  ApiError,
 } from "../api/monthlyRental.js";
 import useSiteInfo from "../hooks/useSiteInfo.js";
+import { alertError } from "../utils/alert.js";
 import {
   isValidCarNumber,
   isValidCarrier,
@@ -38,8 +41,9 @@ const tomorrow = (() => {
 /* ── 表單驗證：欄位 → error message 對應 ── */
 function validate(form) {
   const errors = {};
-  if (!form.vehicleType) errors.vehicleType = "請選擇車型類別";
-  if (!form.paymentPlan) errors.paymentPlan = "請選擇繳費方式";
+  if (!form.carType) errors.carType = "請選擇車型類別";
+  if (!form.rateName) errors.rateName = "請選擇身分費率";
+  if (!form.paymentPeriod) errors.paymentPeriod = "請選擇繳費期別";
   if (!form.name.trim()) errors.name = "請輸入車主姓名";
   if (!form.phone) {
     errors.phone = "請輸入手機號碼";
@@ -49,7 +53,7 @@ function validate(form) {
   if (!form.carNumber.trim()) {
     errors.carNumber = "請輸入車牌號碼";
   } else if (!isValidCarNumber(form.carNumber)) {
-    errors.carNumber = "格式範例：ABC-1234 或 1234-TT";
+    errors.carNumber = "格式範例:ABC-1234 或 1234-TT";
   }
   if (!form.beginDate) {
     errors.beginDate = "請選擇起租日";
@@ -86,10 +90,8 @@ export default function FormPage() {
   const goWithSearch = (pathname, options) =>
     navigate({ pathname, search: location.search }, options);
 
-  // 上一頁：使用 history back，保留之前連同 state 的 entry
-  // 避免 push 新 entry 導致重打 API（靈深連條下沒有 state）
+  // 上一頁：走 history back 保留 state、避免重打 API
   const handleBack = () => {
-    // 初始進入點（沒有 history）→ fallback 到首頁
     if (location.key === "default") {
       goWithSearch("/");
     } else {
@@ -98,8 +100,9 @@ export default function FormPage() {
   };
 
   const [form, setForm] = useState({
-    vehicleType: "",
-    paymentPlan: "",
+    carType: "",
+    rateName: "",
+    paymentPeriod: "",
     name: "",
     phone: "",
     carNumber: "",
@@ -111,60 +114,32 @@ export default function FormPage() {
     company: "",
   });
   const [errors, setErrors] = useState({});
-  const [plans, setPlans] = useState([]);
-  const [plansLoading, setPlansLoading] = useState(false);
-  const [rental, setRental] = useState(null);
-  const [rentalLoading, setRentalLoading] = useState(false);
+  const [rates, setRates] = useState([]);
+  const [ratesLoading, setRatesLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  /* ── 車型變更 → 載入繳費方式 ── */
+  /* ── siteCode 就緒 → 載入身分費率清單 ── */
   useEffect(() => {
-    if (!form.vehicleType) {
-      queueMicrotask(() => {
-        setPlans([]);
-        setRental(null);
+    if (!siteCode) return;
+    let cancelled = false;
+    setRatesLoading(true);
+    fetchRates(siteCode)
+      .then((data) => {
+        if (cancelled) return;
+        setRates(data);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        const msg = err instanceof ApiError ? err.message : "載入費率失敗";
+        alertError(msg);
+      })
+      .finally(() => {
+        if (!cancelled) setRatesLoading(false);
       });
-      return;
-    }
-    let cancelled = false;
-    queueMicrotask(() => setPlansLoading(true));
-    fetchPaymentPlans(Number(form.vehicleType)).then((data) => {
-      if (cancelled) return;
-      setPlans(data);
-      setPlansLoading(false);
-      setForm((prev) => ({ ...prev, paymentPlan: "" }));
-      setRental(null);
-    });
     return () => {
       cancelled = true;
     };
-  }, [form.vehicleType]);
-
-  /* ── 繳費方式 or 起租日變更 → 計算應繳 ── */
-  const doCalc = useCallback(() => {
-    if (!form.vehicleType || !form.paymentPlan || !form.beginDate) {
-      queueMicrotask(() => setRental(null));
-      return;
-    }
-    let cancelled = false;
-    queueMicrotask(() => setRentalLoading(true));
-    calculateRental({
-      vehicleType: Number(form.vehicleType),
-      planId: form.paymentPlan,
-      beginDate: form.beginDate,
-    }).then((result) => {
-      if (cancelled) return;
-      setRental(result);
-      setRentalLoading(false);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [form.vehicleType, form.paymentPlan, form.beginDate]);
-
-  useEffect(() => {
-    doCalc();
-  }, [doCalc]);
+  }, [siteCode]);
 
   /* ── guard ── */
   if (siteLoading) {
@@ -178,18 +153,70 @@ export default function FormPage() {
   if (siteError || !siteData)
     return <Navigate to={{ pathname: "/", search: location.search }} replace />;
 
-  const { site, vehicleTypes } = siteData;
-  const vehicleOptions = vehicleTypes.map((v) => ({
-    value: String(v.vehicleType),
-    label: v.vehicleName,
+  const { site } = siteData;
+
+  /* ── 級聯選單資料 ── */
+
+  // 車型類別：從 rates 裡 unique 的 car_type
+  const availableCarTypes = Array.from(new Set(rates.map((r) => r.carType)));
+  const carTypeOptions = availableCarTypes.map((ct) => ({
+    value: ct,
+    label: CAR_TYPE_LABELS[ct] ?? `類型 ${ct}`,
   }));
 
+  // 身分費率：依目前選的車型過濾
+  const filteredRates = form.carType
+    ? rates.filter((r) => r.carType === form.carType)
+    : [];
+  const rateOptions = filteredRates.map((r) => ({
+    value: r.rateName,
+    label: r.rateName,
+  }));
+
+  // 選中的 rate 物件
+  const selectedRate = filteredRates.find((r) => r.rateName === form.rateName);
+
+  // 繳費期別：依選中的 rate 的 payment_method 位元過濾
+  const periodOptions = getAvailablePeriods(selectedRate).map((p) => ({
+    value: p.key,
+    label: p.label,
+  }));
+  const availablePeriods = getAvailablePeriods(selectedRate);
+  const selectedPeriod = availablePeriods.find((p) => p.key === form.paymentPeriod);
+
   /* ── helpers ── */
+
+  // 一般欄位更新
   function update(field) {
     return (value) => {
       setForm((prev) => ({ ...prev, [field]: value }));
       setErrors((prev) => ({ ...prev, [field]: undefined }));
     };
+  }
+
+  // 級聯更新：切換車型 → 清空費率 + 期別；切換費率 → 清空期別
+  function handleCarTypeChange(value) {
+    setForm((prev) => ({
+      ...prev,
+      carType: value,
+      rateName: "",
+      paymentPeriod: "",
+    }));
+    setErrors((prev) => ({
+      ...prev,
+      carType: undefined,
+      rateName: undefined,
+      paymentPeriod: undefined,
+    }));
+  }
+
+  function handleRateNameChange(value) {
+    setForm((prev) => ({ ...prev, rateName: value, paymentPeriod: "" }));
+    setErrors((prev) => ({
+      ...prev,
+      rateName: undefined,
+      paymentPeriod: undefined,
+    }));
   }
 
   async function handleSubmit() {
@@ -205,14 +232,19 @@ export default function FormPage() {
     }
     setSubmitting(true);
     try {
-      const result = await submitRegistration({ ...form, siteCode, rental });
+      const result = await submitRegistration({
+        ...form,
+        siteCode,
+        rate: selectedRate,
+        period: selectedPeriod,
+      });
       if (!result.success) return;
 
       if (result.hasBill && result.billId) {
         window.location.href = `https://rental.mitwit-cre.com.tw/?mid=${result.billId}`;
       } else {
         goWithSearch(`/success/${siteCode}`, {
-          state: { form, rental },
+          state: { form, rate: selectedRate, period: selectedPeriod },
         });
       }
     } finally {
@@ -220,58 +252,61 @@ export default function FormPage() {
     }
   }
 
-  const planOptions = plans.map((p) => ({
-    value: p.planId,
-    label: `${p.planName}（$${p.amount.toLocaleString()}）`,
-  }));
-  const selectedPlan = plans.find((p) => p.planId === form.paymentPlan);
-
   return (
     <div className="form-page">
-      <AppBar
-        title={site.parkName || site.siteName}
-        onBack={handleBack}
-      />
+      <AppBar title={site.parkName || site.siteName} onBack={handleBack} />
 
       <main className="form-page__body">
         <h2 className="form-page__heading">基本資料</h2>
 
         <div className="form-page__fields">
-          <div className="form-page__full" data-field="vehicleType">
+          <div className="form-page__full" data-field="carType">
             <SelectField
               icon="mdi-parking"
-              label="車型類別"
+              label={ratesLoading ? "載入費率中..." : "車型類別"}
               required
-              value={form.vehicleType}
-              onChange={update("vehicleType")}
-              options={vehicleOptions}
-              error={errors.vehicleType}
+              value={form.carType}
+              onChange={handleCarTypeChange}
+              options={carTypeOptions}
+              error={errors.carType}
             />
           </div>
 
-          {(form.vehicleType || plansLoading) && (
-            <div className="form-page__full" data-field="paymentPlan">
+          {form.carType && (
+            <div className="form-page__full" data-field="rateName">
               <SelectField
-                icon="mdi-credit-card-outline"
-                label={plansLoading ? "載入繳費方式..." : "繳費方式"}
+                icon="mdi-card-account-details-outline"
+                label="身分費率"
                 required
-                value={form.paymentPlan}
-                onChange={update("paymentPlan")}
-                options={planOptions}
-                error={errors.paymentPlan}
+                value={form.rateName}
+                onChange={handleRateNameChange}
+                options={rateOptions}
+                error={errors.rateName}
               />
             </div>
           )}
 
-          {selectedPlan && (
+          {form.rateName && (
+            <div className="form-page__full" data-field="paymentPeriod">
+              <SelectField
+                icon="mdi-credit-card-outline"
+                label="繳費期別"
+                required
+                value={form.paymentPeriod}
+                onChange={update("paymentPeriod")}
+                options={periodOptions}
+                error={errors.paymentPeriod}
+              />
+            </div>
+          )}
+
+          {selectedPeriod && (
             <div className="form-page__full form-page__fee-badge">
               <span className="form-page__fee-label">費率金額</span>
               <span className="form-page__fee-amount">
-                NT$ {selectedPlan.amount.toLocaleString()}
+                NT$ {selectedPeriod.amount.toLocaleString()}
               </span>
-              <span className="form-page__fee-per">
-                ／{selectedPlan.planName}
-              </span>
+              <span className="form-page__fee-per">／{selectedPeriod.label}</span>
             </div>
           )}
 
@@ -377,32 +412,6 @@ export default function FormPage() {
               hint="選填，/ 開頭共 8 碼"
             />
           </div>
-
-          {(rental || rentalLoading) && (
-            <div className="form-page__full form-page__rental-card">
-              <h3 className="form-page__rental-title">應繳資訊</h3>
-              {rentalLoading ? (
-                <p className="form-page__rental-loading">計算中...</p>
-              ) : (
-                rental && (
-                  <dl className="form-page__rental-dl">
-                    <dt>租期</dt>
-                    <dd>
-                      {rental.beginDate} ~ {rental.endDate}
-                    </dd>
-                    <dt>月數</dt>
-                    <dd>{rental.months} 個月</dd>
-                    <dt>月租單價</dt>
-                    <dd>NT$ {rental.unitPrice.toLocaleString()}</dd>
-                    <dt>應繳總額</dt>
-                    <dd className="form-page__rental-total">
-                      NT$ {rental.totalAmount.toLocaleString()}
-                    </dd>
-                  </dl>
-                )
-              )}
-            </div>
-          )}
         </div>
       </main>
 

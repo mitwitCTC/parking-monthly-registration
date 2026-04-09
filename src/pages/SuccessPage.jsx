@@ -6,15 +6,17 @@ import "./SuccessPage.css";
 
 export default function SuccessPage() {
   const { siteCode } = useParams();
-  const { data: siteData } = useSiteInfo(siteCode);
   const location = useLocation();
   const navigate = useNavigate();
-  const { form, rental } = location.state || {};
+  const { data: siteData } = useSiteInfo(siteCode, {
+    initialData: location.state?.siteInfo ?? null,
+  });
+  const { form, rate, period } = location.state || {};
 
   // 表單資料來自 state（一次性），遺失就導回首頁
-  if (!form) return <Navigate to="/" replace />;
+  if (!form) return <Navigate to={{ pathname: "/", search: location.search }} replace />;
 
-  const siteName = siteData?.site?.siteName || "";
+  const siteName = siteData?.site?.parkName || siteData?.site?.siteName || "";
 
   return (
     <div className="success-page">
@@ -37,14 +39,18 @@ export default function SuccessPage() {
             <dd>{form.carNumber}</dd>
             <dt>起租日</dt>
             <dd>{form.beginDate}</dd>
-            {rental && (
+            {rate && (
               <>
-                <dt>租期</dt>
-                <dd>
-                  {rental.beginDate} ~ {rental.endDate}
-                </dd>
+                <dt>身分費率</dt>
+                <dd>{rate.rateName}</dd>
+              </>
+            )}
+            {period && (
+              <>
+                <dt>繳費期別</dt>
+                <dd>{period.label}</dd>
                 <dt>應繳金額</dt>
-                <dd>NT$ {rental.totalAmount.toLocaleString()}</dd>
+                <dd>NT$ {period.amount.toLocaleString()}</dd>
               </>
             )}
             {form.email && (
@@ -57,7 +63,11 @@ export default function SuccessPage() {
         </div>
       </main>
 
-      <BottomButton onClick={() => navigate("/")}>回首頁</BottomButton>
+      <BottomButton
+        onClick={() => navigate({ pathname: "/", search: location.search })}
+      >
+        回首頁
+      </BottomButton>
     </div>
   );
 }
