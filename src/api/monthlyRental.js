@@ -29,6 +29,7 @@ export const RENT_PERIODS = [
 export const CAR_TYPE_LABELS = {
   0: "汽車",
   1: "機車",
+  2: "重機",
 };
 
 /* ── 錯誤型別 ── */
