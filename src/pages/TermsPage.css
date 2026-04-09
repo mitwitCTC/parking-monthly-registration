@@ -1,0 +1,53 @@
+.terms-page {
+  min-height: 100dvh;
+  padding-bottom: 72px;
+}
+
+.terms-page__body {
+  padding: 72px 16px 16px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.terms-page__heading {
+  text-align: center;
+  color: var(--color-main);
+  font-size: 1.15rem;
+  margin-bottom: 12px;
+}
+
+.terms-page__box {
+  background: var(--color-white);
+  border-radius: var(--radius);
+  padding: 16px;
+  max-height: 63vh;
+  overflow-y: auto;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  box-shadow: var(--shadow);
+}
+
+.terms-page__line {
+  margin-bottom: 4px;
+}
+
+.terms-page__line--red {
+  color: var(--color-error);
+}
+
+.terms-page__checkbox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 16px;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.terms-page__checkbox input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--color-main);
+  cursor: pointer;
+}
