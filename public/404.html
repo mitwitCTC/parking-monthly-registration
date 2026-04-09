@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <title>月租登記系統</title>
+    <script>
+      // GitHub Pages SPA 404 fallback：
+      // 把「不存在的路徑」塞進 sessionStorage，再導回 index.html
+      // index.html 啟動前會讀這個值、還原路徑，React Router 就能接手
+      (function () {
+        var path = location.pathname + location.search + location.hash;
+        sessionStorage.setItem("spa_redirect", path);
+        // GH Pages 的 repo 根路徑
+        var base = "/parking-monthly-registration/";
+        location.replace(base);
+      })();
+    </script>
+  </head>
+  <body></body>
+</html>

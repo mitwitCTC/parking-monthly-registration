@@ -2,7 +2,10 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ command }) => ({
+  // GitHub Pages 部署路徑：https://<user>.github.io/parking-monthly-registration/
+  // dev 走根路徑，build 時套 repo 子路徑
+  base: command === 'build' ? '/parking-monthly-registration/' : '/',
   plugins: [react()],
   server: {
     proxy: {
@@ -14,4 +17,4 @@ export default defineConfig({
       },
     },
   },
-})
+}))

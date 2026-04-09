@@ -12,6 +12,19 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // SPA fallback 還原：404.html 會把原本路徑存進 sessionStorage，
+      // 這裡讀出來用 history.replaceState 還原，React Router 接手後就能正常犩渲
+      (function () {
+        var redirect = sessionStorage.getItem("spa_redirect");
+        if (redirect) {
+          sessionStorage.removeItem("spa_redirect");
+          if (redirect !== location.pathname + location.search + location.hash) {
+            history.replaceState(null, "", redirect);
+          }
+        }
+      })();
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
